@@ -58,7 +58,7 @@ func main(){
 		for range signal {
 			calcValue()
 			reading := dto.SensorMessage{
-				Id: i,
+				//Id: i,
 				Name: *name,
 				Value:value,
 				Timestamp:time.Now(),

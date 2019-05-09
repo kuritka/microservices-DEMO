@@ -24,7 +24,7 @@ func GetQueue(name string, channel *amqp.Channel, autoDelete bool) (*amqp.Queue)
 	q, err :=channel.QueueDeclare( //automatically creates queue if doesnt exists
 		name,					//queue name
 		false,			//determines if the message should be saved to disk, messages will survive servere restart
-		autoDelete ,		//what to do with messages if they dont have any active consumer, true = message wil be deleted from the queue, false = keep it
+		autoDelete ,			//what to do with messages if they dont have any active consumer, true = message wil be deleted from the queue, false = keep it
 		false,			//exclusive - if same queue exists in the different channel it will fail  (false), all connections will share it (true)
 		false,			//only return preexisting queue which matches providing configuration, (true) server receive an error when not find, (false) create new queue if doesnt exists on the server
 		nil)
