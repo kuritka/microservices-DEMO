@@ -81,7 +81,7 @@ func main(){
 }
 
 
-//if listening from amq.fanout from controller comes, tahn it push new item to fanout comming back to controllers.
+//if listening from amq.fanout from controller comes, than it push new item to fanout comming back to controllers.
 //because controllers has list of existing connections, only new one will be identified
 func listenForDiscoverRequest(queueName string, channel *amqp.Channel) {
 	msgs,_ := channel.Consume(queueName,"",true,false,false,false,nil)

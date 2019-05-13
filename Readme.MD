@@ -16,7 +16,9 @@ than connection string to mq is `amqp://guest:guest@localhost:5672`
 
 ### PLSQL
 
-**ensure that `$HOME/docker/volumes/postgres` is empty!**
+**If you didn't connect yet ensure that `$HOME/docker/volumes/postgres` is empty!**
+Database is persited on `$HOME/docker/volumes/postgres` so if you run docker second time
+do not remove this directory!
 
 ```bash
 sudo docker run --rm --name pg-docker \
@@ -44,6 +46,12 @@ or `sudo docker exec -it <hash> bash` and check environment variables
 by `env` command and login into database by `psql -h 127.0.0.1 -p 5432 -U test -d postgres --password`
 `\l` shows list of available databases
 
+
+When you create scheme you could export scheme this way... 
+```bash
+sudo docker exec -it 5f31020172b8 pg_dump --schema-only --no-owner distributed -U test > create_the_tables.sql
+``` 
+
 ### PGAdmin-4
 
 ```bash
@@ -57,4 +65,3 @@ sudo docker run -p 8085:80 \
 than run `localhost:8085` from your browser.
 When create new server use `pg-docker` as Host and `5432` as port 
 `postgres` as database and user. For password use `password`
-
