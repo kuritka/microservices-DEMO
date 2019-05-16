@@ -24,13 +24,17 @@ var min = flag.Float64("min", 1., "minimum value for generated readings")
 var stepSize = flag.Float64("step", 0.1, "maximum allowable change per measurement")
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-var value = r.Float64() * (*max - *min) + *min
-var nom = (*max - *min) /2 + *min
+var value float64
+var nom float64
 
 var url = "amqp://guest:guest@localhost:5672"
 
 func main(){
 	flag.Parse()
+
+	value = r.Float64() * (*max - *min) + *min
+	nom = (*max - *min) /2 + *min
+
 
 	conn, channel := qutils.GetChannel(url)
 	defer channel.Close()

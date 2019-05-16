@@ -10,6 +10,13 @@ import (
 const SensorDiscoveryExchange = "sensor-discovery-exchange"
 const PersistReadingsQueue= "persist-readings"
 
+//used by WebApp to let coordinator know that one of them will get a list of all of the available sources
+const WebappDiscoveryQueue = "WebappDiscoveryQueue"
+//names of sensors that have been discovered
+const WebappSourceExchange = "WebappSourceExchange"
+//sendout readings to web application
+const WebappReadingsExchange = "WebappReadingsExchange"
+
 func GetChannel(url string)(*amqp.Connection, *amqp.Channel){
 	conn, err := amqp.Dial(url)
 	failOnError(err, "Failed connect to RabitMQ")

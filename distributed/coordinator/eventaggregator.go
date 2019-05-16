@@ -11,12 +11,11 @@ type EventAggregator struct {
 }
 
 type EventData struct {
-	Id int
-	Name string
-	Value float64
+	Id        int
+	Name      string
+	Value     float64
 	Timestamp time.Time
 }
-
 
 func NewEventAggreagtor() *EventAggregator {
 	ea := EventAggregator{
@@ -25,9 +24,8 @@ func NewEventAggreagtor() *EventAggregator {
 	return &ea
 }
 
-
-func (ea *EventAggregator) AddListener(eventName string, callback func(interface{})){
-	ea.listeners[eventName] =  append(ea.listeners[eventName], callback)
+func (ea *EventAggregator) AddListener(eventName string, callback func(interface{})) {
+	ea.listeners[eventName] = append(ea.listeners[eventName], callback)
 }
 
 func (ea *EventAggregator) PublishEvent(eventName string, eventData interface{}) {

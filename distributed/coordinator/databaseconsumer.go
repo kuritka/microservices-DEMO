@@ -11,23 +11,23 @@ import (
 
 const maxRate = time.Second * 5
 
-type DatabaseConsumer struct{
-	raiser EventRaiser
-	conn *amqp.Connection
+type DatabaseConsumer struct {
+	raiser  EventRaiser
+	conn    *amqp.Connection
 	channel *amqp.Channel
-	queue *amqp.Queue
+	queue   *amqp.Queue
 	sources []string
 }
 
 func (consumer *DatabaseConsumer) SubscribeToDataEvent(eventName string) {
-	for _,v := range consumer.sources {
+	for _, v := range consumer.sources {
 		if v == eventName {
 			return
 		}
 	}
 
-	consumer.raiser.AddListener("MessageReceived_"+eventName, func() func(interface{}){
-		prevTime := time.Unix(0,0)
+	consumer.raiser.AddListener("MessageReceived_"+eventName, func() func(interface{}) {
+		prevTime := time.Unix(0, 0)
 
 		buf := new(bytes.Buffer)
 
@@ -50,13 +50,12 @@ func (consumer *DatabaseConsumer) SubscribeToDataEvent(eventName string) {
 
 				msg := amqp.Publishing{Body: buf.Bytes()}
 
-				consumer.channel.Publish("",qutils.PersistReadingsQueue,false, false, msg)
+				consumer.channel.Publish("", qutils.PersistReadingsQueue, false, false, msg)
 			}
 		}
 	}())
 
 }
-
 
 func NewDatabaseConsumer(raiser EventRaiser) *DatabaseConsumer {
 	consumer := DatabaseConsumer{
@@ -64,9 +63,9 @@ func NewDatabaseConsumer(raiser EventRaiser) *DatabaseConsumer {
 	}
 
 	consumer.conn, consumer.channel = qutils.GetChannel(url)
-	consumer.queue = qutils.GetQueue(qutils.PersistReadingsQueue,consumer.channel, false)
+	consumer.queue = qutils.GetQueue(qutils.PersistReadingsQueue, consumer.channel, false)
 
-	consumer.raiser.AddListener("DataSourceDiscovered", func(eventData interface{}){
+	consumer.raiser.AddListener("DataSourceDiscovered", func(eventData interface{}) {
 		consumer.SubscribeToDataEvent(eventData.(string))
 	})
 	return &consumer

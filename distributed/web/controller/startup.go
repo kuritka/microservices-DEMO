@@ -4,13 +4,17 @@ import (
 	"net/http"
 )
 
+var ws = newWebsocketController()
+
 func Initialize() {
 	registerRoutes()
 
 	registerFileServers()
+
 }
 
 func registerRoutes() {
+	http.HandleFunc("/ws", ws.handeMessage)
 }
 
 func registerFileServers() {
