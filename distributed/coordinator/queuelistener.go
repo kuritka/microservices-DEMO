@@ -13,86 +13,96 @@ const url = "amqp://guest:guest@localhost:5672"
 
 type QueueListener struct {
 	conn    *amqp.Connection
-	channel *amqp.Channel
-	//check if we registered each sensor to do not register it twice
-	sources    map[string]<-chan amqp.Delivery
-	aggregator *EventAggregator
+	ch      *amqp.Channel
+	sources map[string]<-chan amqp.Delivery
+	ea      *EventAggregator
 }
 
-func NewQueueListener(aggregator *EventAggregator) *QueueListener {
-	listener := QueueListener{
-		sources:    make(map[string]<-chan amqp.Delivery),
-		aggregator: aggregator,
+func NewQueueListener(ea *EventAggregator) *QueueListener {
+	ql := QueueListener{
+		sources: make(map[string]<-chan amqp.Delivery),
+		ea:      ea,
 	}
 
-	listener.conn, listener.channel = qutils.GetChannel(url)
+	ql.conn, ql.ch = qutils.GetChannel(url)
 
-	return &listener
+	return &ql
 }
 
-func (listener *QueueListener) ListenForNewSource() {
-	//rabbit creates queue and attach some name when it is empty
-	q := qutils.GetQueue("", listener.channel, true)
+func (ql *QueueListener) DiscoverSensors() {
+	ql.ch.ExchangeDeclare(
+		qutils.SensorDiscoveryExchange, //name string,
+		"fanout",                       //kind string,
+		false,                          //durable bool,
+		false,                          //autoDelete bool,
+		false,                          //internal bool,
+		false,                          //noWait bool,
+		nil)                            //args amqp.Table)
 
-	//rebinding queue to fanout model
-	//+ which queue to bind?
-	//+ fanout exchanges ignores this field
-	//+ true = when binding doesnt succeed than close channel
-	//+ non need args param
-	listener.channel.QueueBind(q.Name, "", "amq.fanout", false, nil)
+	ql.ch.Publish(
+		qutils.SensorDiscoveryExchange, //exchange string,
+		"",                             //key string,
+		false,                          //mandatory bool,
+		false,                          //immediate bool,
+		amqp.Publishing{})              //msg amqp.Publishing)
+}
 
-	msgs, _ := listener.channel.Consume(q.Name, "", true, false, false, false, nil)
+func (ql *QueueListener) ListenForNewSource() {
+	q := qutils.GetQueue("", ql.ch, true)
+	ql.ch.QueueBind(
+		q.Name,       //name string,
+		"",           //key string,
+		"amq.fanout", //exchange string,
+		false,        //noWait bool,
+		nil)          //args amqp.Table)
 
-	listener.DiscoverSensors()
+	msgs, _ := ql.ch.Consume(
+		q.Name, //queue string,
+		"",     //consumer string,
+		true,   //autoAck bool,
+		false,  //exclusive bool,
+		false,  //noLocal bool,
+		false,  //noWait bool,
+		nil)    //args amqp.Table)
 
-	//for loop waiting for messages in msg channel
+	ql.DiscoverSensors()
+
+	fmt.Println("listening for new sources")
 	for msg := range msgs {
-		listener.aggregator.PublishEvent("DataSourceDiscovered", string(msg.Body))
-		//msg came so new sensor is online and binds into the system
-		//in order to receive those messages
-		//msg.body has queue name for just activated sensor
-		sourceChannel, _ := listener.channel.Consume(string(msg.Body), "", true, false, false, false, nil)
+		if ql.sources[string(msg.Body)] == nil {
+			fmt.Println("new source discovered")
+			ql.ea.PublishEvent("DataSourceDiscovered", string(msg.Body))
+			sourceChan, _ := ql.ch.Consume(
+				string(msg.Body), //queue string,
+				"",               //consumer string,
+				true,             //autoAck bool,
+				false,            //exclusive bool,
+				false,            //noLocal bool,
+				false,            //noWait bool,
+				nil)              //args amqp.Table)
 
-		//has new message already been registered ?
-		if listener.sources[string(msg.Body)] == nil {
-			listener.sources[string(msg.Body)] = sourceChannel
+			ql.sources[string(msg.Body)] = sourceChan
 
-			go listener.AddListener(sourceChannel)
+			go ql.AddListener(sourceChan)
 		}
-
 	}
 }
 
-func (listener *QueueListener) AddListener(msgs <-chan amqp.Delivery) {
+func (ql *QueueListener) AddListener(msgs <-chan amqp.Delivery) {
 	for msg := range msgs {
 		r := bytes.NewReader(msg.Body)
 		d := gob.NewDecoder(r)
 		sd := new(dto.SensorMessage)
 		d.Decode(sd)
 
-		fmt.Printf("received message : %v \n", sd)
+		fmt.Printf("Received message: %v\n", sd)
 
 		ed := EventData{
 			Name:      sd.Name,
-			Value:     sd.Value,
 			Timestamp: sd.Timestamp,
-			Id:        sd.Id,
+			Value:     sd.Value,
 		}
 
-		listener.aggregator.PublishEvent("MessageReceived_"+msg.RoutingKey, ed)
+		ql.ea.PublishEvent("MessageReceived_"+msg.RoutingKey, ed)
 	}
-}
-
-func (listener *QueueListener) DiscoverSensors() {
-	listener.channel.ExchangeDeclare(
-		qutils.SensorDiscoveryExchange,
-		"fanout", //could be fanout header and something else...
-		false,    //setup durable queue or not ?
-		false,    //atodelete exchange when nobody is present?
-		false,    //true = reject external publishing requests, advanced broker scenarios
-		false,
-		nil,
-	)
-
-	listener.channel.Publish(qutils.SensorDiscoveryExchange, "", false, false, amqp.Publishing{})
 }

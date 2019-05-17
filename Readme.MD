@@ -65,3 +65,39 @@ sudo docker run -p 8085:80 \
 than run `localhost:8085` from your browser.
 When create new server use `pg-docker` as Host and `5432` as port 
 `postgres` as database and user. For password use `password`
+
+
+
+
+## running application
+
+### sensors
+
+```bash
+go run ./sensor.go --name=AAA --freq=1
+```
+
+```bash
+go run ./sensor.go --name=BBB --freq=5
+```
+
+### coordinators
+
+```bash
+go run main.go
+```
+
+```bash
+go run main.go
+```
+
+### web
+```bash
+go run main.go
+```
+
+
+### datamanager
+```bash
+go run main.go
+```

@@ -9,7 +9,7 @@ import (
 func main() {
 	controller.Initialize()
 
-	fmt.Printf("Listening...")
+	fmt.Printf("http://localhost:3000/public Listening...")
 	http.ListenAndServe(":3000", nil)
 
 }

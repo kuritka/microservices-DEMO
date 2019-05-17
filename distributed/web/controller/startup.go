@@ -10,11 +10,10 @@ func Initialize() {
 	registerRoutes()
 
 	registerFileServers()
-
 }
 
 func registerRoutes() {
-	http.HandleFunc("/ws", ws.handeMessage)
+	http.HandleFunc("/ws", ws.handleMessage)
 }
 
 func registerFileServers() {

@@ -9,64 +9,71 @@ import (
 	"time"
 )
 
-const maxRate = time.Second * 5
+const maxRate = 5 * time.Second
 
 type DatabaseConsumer struct {
-	raiser  EventRaiser
+	er      EventRaiser
 	conn    *amqp.Connection
-	channel *amqp.Channel
+	ch      *amqp.Channel
 	queue   *amqp.Queue
 	sources []string
 }
 
-func (consumer *DatabaseConsumer) SubscribeToDataEvent(eventName string) {
-	for _, v := range consumer.sources {
+func NewDatabaseConsumer(er EventRaiser) *DatabaseConsumer {
+	dc := DatabaseConsumer{
+		er: er,
+	}
+
+	dc.conn, dc.ch = qutils.GetChannel(url)
+	dc.queue = qutils.GetQueue(qutils.PersistReadingsQueue,
+		dc.ch, false)
+
+	dc.er.AddListener("DataSourceDiscovered", func(eventData interface{}) {
+		dc.SubscribeToDataEvent(eventData.(string))
+	})
+
+	return &dc
+}
+
+func (dc *DatabaseConsumer) SubscribeToDataEvent(eventName string) {
+	for _, v := range dc.sources {
 		if v == eventName {
 			return
 		}
 	}
 
-	consumer.raiser.AddListener("MessageReceived_"+eventName, func() func(interface{}) {
+	dc.er.AddListener("MessageReceived_"+eventName, func() func(interface{}) {
 		prevTime := time.Unix(0, 0)
 
 		buf := new(bytes.Buffer)
 
 		return func(eventData interface{}) {
-			//casting object
-			event := eventData.(EventData)
+			ed := eventData.(EventData)
 			if time.Since(prevTime) > maxRate {
 				prevTime = time.Now()
 
 				sm := dto.SensorMessage{
-					Name:      event.Name,
-					Value:     event.Value,
-					Timestamp: event.Timestamp,
-					Id:        event.Id,
+					Name:      ed.Name,
+					Value:     ed.Value,
+					Timestamp: ed.Timestamp,
 				}
 
 				buf.Reset()
+
 				enc := gob.NewEncoder(buf)
 				enc.Encode(sm)
 
-				msg := amqp.Publishing{Body: buf.Bytes()}
+				msg := amqp.Publishing{
+					Body: buf.Bytes(),
+				}
 
-				consumer.channel.Publish("", qutils.PersistReadingsQueue, false, false, msg)
+				dc.ch.Publish(
+					"",                          //exchange string,
+					qutils.PersistReadingsQueue, //key string,
+					false,                       //mandatory bool,
+					false,                       //immediate bool,
+					msg)                         //msg amqp.Publishing)
 			}
 		}
 	}())
-
-}
-
-func NewDatabaseConsumer(raiser EventRaiser) *DatabaseConsumer {
-	consumer := DatabaseConsumer{
-		raiser: raiser,
-	}
-
-	consumer.conn, consumer.channel = qutils.GetChannel(url)
-	consumer.queue = qutils.GetQueue(qutils.PersistReadingsQueue, consumer.channel, false)
-
-	consumer.raiser.AddListener("DataSourceDiscovered", func(eventData interface{}) {
-		consumer.SubscribeToDataEvent(eventData.(string))
-	})
-	return &consumer
 }
