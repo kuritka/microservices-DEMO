@@ -8,7 +8,6 @@ import (
 var consumer *coordinator.DatabaseConsumer
 var webappConsumer *coordinator.WebappConsumer
 
-
 func main() {
 	fmt.Printf("listening....")
 	aggregator := coordinator.NewEventAggreagtor()
@@ -20,7 +19,6 @@ func main() {
 	webappConsumer.SubscribeDataEvent("blaa")
 
 	go listener.ListenForNewSource()
-
 
 	var a string
 	fmt.Scanln(&a)
